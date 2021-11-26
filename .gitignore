@@ -15,3 +15,6 @@
 .hg/
 .clj-kondo
 .lsp
+.eastwood
+/tmp
+!/tmp/.keep

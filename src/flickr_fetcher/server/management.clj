@@ -1,4 +1,10 @@
 (ns flickr-fetcher.server.management
+  "Manages the flickr fetcher server.
+  Note only one server can be active per process at one time.
+  Key functions:
+    - start-server
+    - stop-server
+    - restart-server"
   (:require [org.httpkit.server :as httpkit]
             [flickr-fetcher.server.routes :as routes]
             [ring.middleware.defaults :as ring]

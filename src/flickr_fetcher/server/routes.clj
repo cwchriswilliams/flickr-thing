@@ -1,7 +1,10 @@
 (ns flickr-fetcher.server.routes
+  "Defines the routes for the Flickr Fetcher"
   (:require [compojure.core :as cjre]
-            [compojure.route :as route]))
+            [compojure.route :as route]
+            [flickr-fetcher.lib.fetcher :as fetchr]
+            [cheshire.core :as json]))
 
 (cjre/defroutes flickr-fetcher
-  (cjre/GET "/" [] {:status 200 :body "Everything is awesome 4"})
+  (cjre/POST "/photos" [] #(json/generate-string (fetchr/get-photos %)))
   (route/not-found "Error. Page not found"))
