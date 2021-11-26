@@ -1,5 +1,7 @@
 # Flickr Fetcher
 
+[![CircleCI](https://circleci.com/gh/cwchriswilliams/flickr-thing/tree/main.svg?style=svg)](https://circleci.com/gh/cwchriswilliams/flickr-thing/tree/main)
+
 Fetches data from Flickr Feed (https://www.flickr.com/services/feeds/docs/photos_public/) and transforms the returned images.
 
 ## Installation
