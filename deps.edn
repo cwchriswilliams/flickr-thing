@@ -4,7 +4,9 @@
         http-kit/http-kit {:mvn/version "2.5.3"}
         compojure/compojure {:mvn/version "1.6.2"}
         ch.qos.logback/logback-classic {:mvn/version "1.2.7"}
+        ring/ring-core {:mvn/version "1.9.4"}
         ring/ring-defaults {:mvn/version "0.3.3"}
+        ring/ring-json {:mvn/version "0.5.1"}
         clj-http/clj-http {:mvn/version "3.12.3"}
         hickory/hickory {:mvn/version "0.7.1"}
         cheshire/cheshire {:mvn/version "5.10.1"}

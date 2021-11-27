@@ -8,6 +8,7 @@
   (:require [org.httpkit.server :as httpkit]
             [flickr-fetcher.server.routes :as routes]
             [ring.middleware.defaults :as ring]
+            [ring.middleware.json :as ring-json]
             [flickr-fetcher.interop.log :as log]))
 
 ; The server instance for starting and stopping
@@ -19,7 +20,7 @@
     - Port for the server to listen on"
   [port]
   (reset! app-server-instance
-          (httpkit/run-server (ring/wrap-defaults #'routes/flickr-fetcher ring/api-defaults) {:port port}))
+          (httpkit/run-server (ring-json/wrap-json-body (ring/wrap-defaults #'routes/flickr-fetcher ring/api-defaults)) {:port port}))
   (log/info (apply str "Server started on port " (str port))))
 
 (defn stop-server

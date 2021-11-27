@@ -93,9 +93,10 @@
   Arguments:
     - url to download from
     - (opt) destination to download to"
-  ([url] (let [file-name (get-file-name-from-url url)
-               destination (build-download-path file-name)]
-           (download-image-from-url url destination)))
+  ([url]
+   (let [file-name (get-file-name-from-url url)
+         destination (build-download-path file-name)]
+     (download-image-from-url url destination)))
   
   ([url destination]
    (log/info (str "Writing out image to " destination))
@@ -115,21 +116,25 @@
 
 (defn get-photos
   "Downloads the images from the flickr url defined in the config
+  Arguments:
+    - Number of photos to retrieve
   Returns:
     - A collection of images downloaded"
-  [_]
+  [cnt]
   (->
    (pull-public-photo-data)
    :body
    get-image-urls-from-public-photo-atom-data
-   download-images
-   ))
+   ((partial take cnt))
+   vec
+   download-images))
 
 
 (comment
 
-  (def example-data (slurp "test/flickr-fetcher/data/example.xml"))
+  (def example-data (slurp "test/flickr_fetcher/data/example.xml"))
   (get-image-urls-from-public-photo-atom-data example-data)
+  
   (def hicko (hickory/as-hickory (hickory/parse example-data)))
   (def selected-tags (selector/select (selector/child (selector/tag :entry) (selector/attr :type #(= "image/jpeg" %))) hicko))
 

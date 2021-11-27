@@ -44,7 +44,12 @@ A single endpoint is provided.
 
 | Verb   | Path      | Parameters         |
 | ------ | --------- |--------------------|
-| POST   | /photos   | *none*             |
+| POST   | /photos   | take: Number of images to download |
+
+curl example:
+```bsh
+curl --header "Accept: text/plain" --header "Content-Type: application/json" -XPOST http://localhost:5556/photos --data '{"take":7}'
+```
 
 
 ### Run Tests
