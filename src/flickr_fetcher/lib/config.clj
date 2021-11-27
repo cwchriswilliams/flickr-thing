@@ -4,8 +4,7 @@
             [cheshire.core :as json]
             [clojure.spec.alpha :as spec]
             [expound.alpha :as expound]
-            [flickr-fetcher.interop.log :as log]
-            [flickr-fetcher.lib.clj-helpers :as hlprs]))
+            [flickr-fetcher.interop.log :as log]))
 
 ; Config file path is saved when set to allow reloading config
 (defonce -config-file-path (atom nil))
@@ -33,11 +32,13 @@
   Arguments:
     - Path to existing config path
   Returns:
-    - Java File to file if file exists, otherwise map with :error-msg"
+    - Java File to file if file exists
+  Throws:
+    - ex-info with :type :file-not-found if file does not exist"
   [file-path]
   (if-let [file (file-io/does-file-exist file-path)]
     file
-    {:error-msg (str "Config file " file-path " not found.")})
+    (throw (ex-info (str "Config file " file-path " not found.") {:type :file-not-found})))
   )
 
 (defn parse-config
@@ -45,11 +46,13 @@
   Arguments:
     - text of the config file
   Returns:
-    - hash-map of config data if valid otherwise map with :error-msg"
+    - hash-map of config data if valid
+  Throws:
+    - ex-info with :type :invalid-json if json not valid"
     [config-text]
   (try (json/parse-string config-text true)
        (catch Exception ex
-         {:error-msg (str "Config file malformed " ex)})))
+         (throw (ex-info (ex-message ex) {:type :invalid-json} ex)))))
 
 (defn read-config
   "Reads the config file and parses it
@@ -68,17 +71,17 @@
   Arguments:
     - config hash-map to validate
   Returns:
-    - config hash-map if valid otherwise map with :error-msg"
+    - config hash-map if valid
+  Throws:
+    - ex-info with :type :invalid-config if does not match spec"
   [config]
   (let [result (spec/conform ::config config)]
     (if (spec/invalid? result)
-      {:error-msg (expound/expound-str ::config config)}
+      (throw (ex-info "Config does not match specification."
+                       {:type :invalid-config
+                        :spec-failure (spec/explain-data ::config config)
+                        :spec-failure-msg (expound/expound-str ::config config)}))
       config)))
-
-(defn check-for-error-msg
-  "Checks if the input is a map with an :error-msg field"
-  [input]
-  (and (map? input) (:error-msg input)))
 
 (defn store-config
   "Stores the config in an atom and logs
@@ -90,18 +93,23 @@
 
 
 (defn reload-config
-  "Loads or reloads the config from the file path in the -config-file-path atom and stores in the -config atom"
+  "Loads or reloads the config from the file path in the -config-file-path atom and stores in the -config atom
+  Throws:
+    - ex-info with :type :failed-to-load-config if fails to load config file"
   []
-  (let [maybe-pred (partial hlprs/maybe-continue (complement check-for-error-msg))]
-    (->
+    (try (->
      @-config-file-path
      validate-config-file-path
-     (maybe-pred read-config)
-     (maybe-pred corece-config)
-     (maybe-pred store-config))))
+     read-config
+     corece-config
+     store-config)
+         (catch Exception ex
+           (throw (ex-info (ex-message ex) {:type :failed-to-load-config} ex)))))
 
 (defn load-config
-  "Loads the config into the -config atom from the provided file path or ./appsettings.json by default"
+  "Loads the config into the -config atom from the provided file path or ./appsettings.json by default
+  Throws:
+    - ex-info with :type :failed-to-load-config if fails to load config file"
   ([config-file-path]
    (reset! -config-file-path config-file-path)
    (reload-config))

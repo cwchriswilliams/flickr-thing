@@ -16,3 +16,4 @@
 (def -logger ^ch.qos.logback.classic.Logger (LoggerFactory/getLogger "flickr-fetcher"))
 
 (defn info [msg] (.info -logger msg))
+(defn error [msg] (.error -logger msg))

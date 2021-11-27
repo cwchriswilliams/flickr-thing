@@ -3,10 +3,11 @@
   (:require [clojure.tools.cli :as cli]
             [clojure.string :as string]
             [flickr-fetcher.server.management :as svr-mgmnt]
-            [flickr-fetcher.lib.config :as config])
+            [flickr-fetcher.lib.config :as config]
+            [flickr-fetcher.interop.log :as log])
   (:gen-class))
 
-(def exit-codes {:ok 0 :failed-to-parse-args 1 :failed-to-load-config 2})
+(def exit-codes {:unexpected-error -1 :ok 0 :failed-to-parse-args 1 :failed-to-load-config 2})
 
 (def cli-options
   "A definition of CLI options as defined in clojure.tools.cli"
@@ -38,11 +39,21 @@
                      :options (opt) - The options provided on the command line"
   [args cli-options]
   (let [{:keys [errors options summary]} (cli/parse-opts args cli-options)]
-    (cond
-      (:help options) {:exit-message (get-usage-text summary)}
-      errors {:exit-message (string/join \newline errors) :exit-status (:failed-to-parse-args exit-codes)}
-      :else {:options options})))
+    (if (some? errors)
+      (throw (ex-info (str "Failed to parse CLI args:\n" (string/join \newline errors)) {:type :failed-to-parse-args}))
+      {:options options :summary summary})))
 
+
+(defn start-service
+  [options]
+  (config/load-config (:config options))
+  (svr-mgmnt/start-server (:port options)))
+
+(defn get-exit-code-from-exception
+  [ex]
+  (let [data (or (ex-data ex) {})
+           ex-type (get data :type :unexpected-error)]
+    (get exit-codes ex-type)))
 
 (defn -main
   "Evaluates the arguments and configuration file and starts the server based on provided args
@@ -50,15 +61,16 @@
   Arguments:
     - args as strings as defined in documentation"
   [& args]
-  (let [{:keys [exit-message exit-status options]} (process-cli-args args cli-options)]
-    (if exit-message
-      (do (println exit-message)
-          (or exit-status (:unexpected-error exit-codes)))
-      (if-let [error (:error-msg (config/load-config (:config options)))]
-        (do (println error)
-            (:failed-to-load-config exit-codes))
-        (do (svr-mgmnt/start-server (:port options))
-            (:ok exit-codes))))))
+  (try
+    (let [{:keys [summary options]} (process-cli-args args cli-options)]
+      (if (:help options)
+        (println (get-usage-text summary))
+        (start-service options))
+      (:ok exit-codes))
+    (catch Exception ex
+      (log/error (str ex))
+      (println (ex-message ex))
+      (get-exit-code-from-exception ex))))
 
 (comment
   (svr-mgmnt/start-server 5556)
