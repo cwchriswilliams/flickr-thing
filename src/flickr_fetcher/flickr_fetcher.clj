@@ -73,5 +73,6 @@
       (get-exit-code-from-exception ex))))
 
 (comment
+  (config/load-config "./resources/appsettings.json")
   (svr-mgmnt/start-server 5556)
   (svr-mgmnt/restart-server))

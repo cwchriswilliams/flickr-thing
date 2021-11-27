@@ -12,6 +12,7 @@
         cheshire/cheshire {:mvn/version "5.10.1"}
         expound/expound {:mvn/version "0.8.10"}
         org.clojure/spec.alpha {:mvn/version "0.3.214"}
+        image-resizer/image-resizer {:mvn/version "0.1.10"}
         }
  :aliases
  {:run-m {:main-opts ["-m" "flickr-fetcher.flickr-fetcher"]}

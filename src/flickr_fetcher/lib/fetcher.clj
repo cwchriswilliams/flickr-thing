@@ -6,7 +6,9 @@
             [flickr-fetcher.lib.config :as config]
             [clojure.string :as string]
             [clojure.java.io :as io]
-            [flickr-fetcher.interop.log :as log]))
+            [flickr-fetcher.interop.log :as log]
+            [image-resizer.core :as resizer]
+            [image-resizer.format :as img-format]))
 
 (defn pull-public-photo-data
   "Retrieves the result of a get on the flickr-path from the config
@@ -104,6 +106,51 @@
                in (io/input-stream url)]
      (io/copy in out))))
 
+(defn download-and-resize-image-from-url
+  "Downloads and resizes an image from a url to the path defined in config or the provided destination
+  Arguments:
+    - url to download from
+    - (opt) destination to download to
+    - A resize function to apply (takes a stream and returns an Image)"
+  ([url destination resize-fn]
+   (with-open [out (io/output-stream destination)
+               in (io/input-stream url)]
+     (-> in
+         resize-fn
+         (img-format/as-stream "jpg")
+         (io/copy out))))
+  ([url resize-fn]
+   (let [file-name (get-file-name-from-url url)
+         destination (build-download-path file-name)]
+     (download-and-resize-image-from-url url destination resize-fn))))
+
+(defn make-resize-fn
+  "Builds a resize function based on a resize-spec
+  Arguments:
+    - A resize-spec with the keys (opt):width (opt):height (opt):maintain-ratio?. At least height or width must be provided
+  Returns:
+    - A resize function (takes a stream and returns an Image)"
+  [{:keys [:width :height :maintain-ratio?]}]
+  (cond
+    (and width height (false? maintain-ratio?)) #(resizer/force-resize % width height)
+    (and width height) #(resizer/resize % width height)
+    width #(resizer/resize-to-width % width)
+    height #(resizer/resize-to-height % height))
+  )
+
+
+(defn download-and-resize-images-from-urls
+  "Downloads and resizes and image based on a resize-spec
+  Arguments:
+    - Collection of urls to image files
+    - A resize spec defining how the resize should be performed
+  Returns:
+    - A list of urls the files were downloaded from"
+  [urls resize-spec]
+  (let [resize-fn (make-resize-fn resize-spec)]
+    (pmap #(download-and-resize-image-from-url % resize-fn) urls))
+  urls)
+
 (defn download-images
   "Downloads the images from the urls to the destination specified in config
   Arguments:
@@ -114,28 +161,36 @@
   (pmap download-image-from-url urls)
   urls)
 
-(defn get-photos
-  "Downloads the images from the flickr url defined in the config
+(defn pull-photo-urls
+  "Gets the urls for the images from the flickr url defined in the config
   Arguments:
     - Number of photos to retrieve
   Returns:
-    - A collection of images downloaded"
+    - A collection of images to download"
   [cnt]
   (->
    (pull-public-photo-data)
    :body
    get-image-urls-from-public-photo-atom-data
    ((partial take cnt))
-   vec
-   download-images))
+   vec))
+
+(defn get-photos
+  "Downloads the images from the flickr url defined in the config
+  Arguments:
+    - Number of photos to retrieve
+    - (opt) A resize spec defining how the resize should be performed
+  Returns:
+    - A collection of images downloaded"
+  ([cnt]
+   (-> cnt pull-photo-urls download-images))
+  ([cnt resize-spec]
+   (-> cnt pull-photo-urls (#(download-and-resize-images-from-urls % resize-spec)))))
 
 
 (comment
-
   (def example-data (slurp "test/flickr_fetcher/data/example.xml"))
   (get-image-urls-from-public-photo-atom-data example-data)
-  
   (def hicko (hickory/as-hickory (hickory/parse example-data)))
   (def selected-tags (selector/select (selector/child (selector/tag :entry) (selector/attr :type #(= "image/jpeg" %))) hicko))
-
   )

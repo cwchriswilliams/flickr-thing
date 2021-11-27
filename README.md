@@ -44,13 +44,39 @@ A single endpoint is provided.
 
 | Verb   | Path      | Parameters         |
 | ------ | --------- |--------------------|
-| POST   | /photos   | take: Number of images to download |
+| POST   | /photos   | <ul><li>take: Number of images to download</li><li>resize-spec: (see below)</li></ul> |
+
+#### resize-spec
+
+A resize-spec can be provided containing the following fields
+
+| Name            | Type |
+| --------------- | ---- |
+| maintain-ratio? | bool |
+| height          | int  |
+| width           | int  |
+
+- If maintain-ratio? is not provided assumed to be false
+- height-only, width-only and height and wdth are all valid
+
 
 curl example:
+
 ```bsh
 curl --header "Accept: text/plain" --header "Content-Type: application/json" -XPOST http://localhost:5556/photos --data '{"take":7}'
 ```
 
+json example
+```json
+{
+    "take": 3,
+    "resize-spec": {
+        "maintain-ratio?": false,
+        "height": 800,
+        "width": 50
+    }
+}
+```
 
 ### Run Tests
 

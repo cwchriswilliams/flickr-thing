@@ -20,7 +20,7 @@
     - Port for the server to listen on"
   [port]
   (reset! app-server-instance
-          (httpkit/run-server (ring-json/wrap-json-body (ring/wrap-defaults #'routes/flickr-fetcher ring/api-defaults)) {:port port}))
+          (httpkit/run-server (ring-json/wrap-json-body (ring/wrap-defaults #'routes/flickr-fetcher ring/api-defaults) {:keywords? true}) {:port port}))
   (log/info (apply str "Server started on port " (str port))))
 
 (defn stop-server
