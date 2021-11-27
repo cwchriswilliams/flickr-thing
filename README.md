@@ -32,6 +32,16 @@ Restart the service with `(restart-service)`
 
 Reload the configuration file with `(reload-config)`
 
+#### Via Docker
+
+Build the docker image as normal with <container-name>
+
+```bsh
+docker run -it -p 127.0.0.1:<port>:5050/tcp -v <output-path>:/usr/src/app/tmp --rm --name <image-name> <container-name>
+```
+
+**Note**: Currently this uses the default path to config of ./resources/appsettings.json (TODO: make configurable)
+
 ### Options
 
 - `--PORT` `-p` Port for the server to listen on
