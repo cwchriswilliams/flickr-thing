@@ -36,6 +36,7 @@ Reload the configuration file with `(reload-config)`
 
 - `--PORT` `-p` Port for the server to listen on
 - `--config` `-c` Path to the configuration file to use. A sample is provided in ./resources/appsettings.json
+- `--help` `-h` Display usage text
 
 ### Endpoints
 
