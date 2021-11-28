@@ -1,6 +1,6 @@
-(ns flickr-fetcher.server.routes-test
+(ns flickr-fetcher.controllers.fetcher-test
   (:require [clojure.test :refer [deftest testing is]]
-            [flickr-fetcher.server.routes :as sut]))
+            [flickr-fetcher.controllers.fetcher :as sut]))
 
 (deftest get-parameter-errors-test
   (testing "Sets take to default value if not provided"
