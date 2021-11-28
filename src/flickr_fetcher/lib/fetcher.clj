@@ -90,15 +90,25 @@
       public-photo-entries-selector
       get-href-attribte-from-hickory-entries))
 
+(defn get-failed-to-download-error-msg
+  [ex]
+  (str "Failed to download image: " (ex-message ex)))
+
 (defn download-image-from-url
   "Downloads an image from a url to the path defined in config or the provided destination
   Arguments:
     - url to download from
-    - (opt) destination to download to"
+    - (opt) destination to download to
+  Returns:
+    - A hash-map with :url and (opt) :error"
   ([url]
    (let [file-name (get-file-name-from-url url)
          destination (build-download-path file-name)]
-     (download-image-from-url url destination)))
+     (try
+       (download-image-from-url url destination)
+       {:url url}
+       (catch Exception ex {:url url :error (get-failed-to-download-error-msg ex)}))
+     ))
   
   ([url destination]
    (log/info (str "Writing out image to " destination))
@@ -111,7 +121,9 @@
   Arguments:
     - url to download from
     - (opt) destination to download to
-    - A resize function to apply (takes a stream and returns an Image)"
+    - A resize function to apply (takes a stream and returns an Image)
+  Returns:
+    - A hash-map with :url and (opt) :error"
   ([url destination resize-fn]
    (with-open [out (io/output-stream destination)
                in (io/input-stream url)]
@@ -122,7 +134,10 @@
   ([url resize-fn]
    (let [file-name (get-file-name-from-url url)
          destination (build-download-path file-name)]
-     (download-and-resize-image-from-url url destination resize-fn))))
+          (try
+            (download-and-resize-image-from-url url destination resize-fn)
+            {:url url}
+            (catch Exception ex {:url url :error (get-failed-to-download-error-msg ex)})))))
 
 (defn make-resize-fn
   "Builds a resize function based on a resize-spec
@@ -145,18 +160,17 @@
     - Collection of urls to image files
     - A resize spec defining how the resize should be performed
   Returns:
-    - A list of urls the files were downloaded from"
+    - A list of urls hash-maps with :url and (opt) :error"
   [urls resize-spec]
   (let [resize-fn (make-resize-fn resize-spec)]
-    (pmap #(download-and-resize-image-from-url % resize-fn) urls))
-  urls)
+    (pmap #(download-and-resize-image-from-url % resize-fn) urls)))
 
 (defn download-images
   "Downloads the images from the urls to the destination specified in config
   Arguments:
     - urls to download from
   Returns:
-    - The urls downloaded from"
+    - A list of urls hash-maps with :url and (opt) :error"
   [urls]
   (pmap download-image-from-url urls)
   urls)
@@ -181,7 +195,7 @@
     - Number of photos to retrieve
     - (opt) A resize spec defining how the resize should be performed
   Returns:
-    - A collection of images downloaded"
+    - A list of urls hash-maps with :url and (opt) :error"
   ([cnt]
    (-> cnt pull-photo-urls download-images))
   ([cnt resize-spec]
@@ -190,7 +204,10 @@
 
 (comment
   (def example-data (slurp "test/flickr_fetcher/data/example.xml"))
-  (get-image-urls-from-public-photo-atom-data example-data)
+  (def urls (get-image-urls-from-public-photo-atom-data example-data))
   (def hicko (hickory/as-hickory (hickory/parse example-data)))
   (def selected-tags (selector/select (selector/child (selector/tag :entry) (selector/attr :type #(= "image/jpeg" %))) hicko))
+  (def test-resize-spec {:height 50 :width 200 :maintain-ratio? false})
+  (println urls)
+  (download-and-resize-images-from-urls urls test-resize-spec)
   )

@@ -86,7 +86,9 @@
           (map in [:take :resize-spec]) ; pull parameters into vector in order
           (filter (complement nil?) in)
           (apply fetchr/get-photos in)
-          (json/generate-string in))))))
+          (json/generate-string in)
+          (resp/response in)
+          (resp/content-type in "application/json"))))))
       
 
 (cjre/defroutes flickr-fetcher
