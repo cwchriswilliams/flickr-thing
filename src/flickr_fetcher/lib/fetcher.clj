@@ -140,8 +140,7 @@
   Returns:
     - A list of urls hash-maps with :url and (opt) :error"
   [urls]
-  (pmap download-image-from-url urls)
-  urls)
+  (pmap download-image-from-url urls))
 
 (defn pull-photo-urls
   "Gets the urls for the images from the flickr url defined in the config
