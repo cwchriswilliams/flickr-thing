@@ -1,8 +1,7 @@
 (ns flickr-fetcher.lib.fetcher
-  "Fetches atom data from flickr public feed and returns the image urls"
+  "Fetches json data from flickr public feed and returns the image urls"
   (:require [clj-http.client :as client]
-            [hickory.core :as hickory]
-            [hickory.select :as selector]
+            [cheshire.core :as json]
             [flickr-fetcher.lib.config :as config]
             [clojure.string :as string]
             [clojure.java.io :as io]
@@ -36,59 +35,30 @@
   ([file-name download-path]
    (string/join [download-path file-name]))
   ([file-name]
-   (build-download-path file-name (:download-path (config/get-config))))
-  )
+   (build-download-path file-name (:download-path (config/get-config)))))
 
-(defn string->hickory
-  "Converts a string into hickory format data
+(defn extract-json-data-from-flickr-feed
+  "Gets the json data from the flickr-feed text which for some reason is surrounded by jsonFlickrFeed(...)
   Arguments:
-    - Input text which represents valid html
+    - The json feed data
   Returns:
-    - Input converted to hickory format"
-  [input]
-  (hickory/as-hickory (hickory/parse input)))
+    - The json text data or an empty string if does not match expected format"
+  [json-feed-text]
+  (get (re-matches #"(?ms)^jsonFlickrFeed\((.*)\)$" json-feed-text) 1 ""))
 
-(defn public-photo-entries-selector
-  "Extracts the `entry->jpeg` elements from the atom data of the input
-  Arguments:
-    - input in hickory format
-  Returns:
-    - A collection of entries extracted from hickory"
-  [input]
-  (selector/select
-   (selector/child
-    (selector/tag :entry)
-    (selector/attr :type #(= "image/jpeg" %))) input))
 
-(defn get-href-attribute-from-hickory-entry
-  "Gets the href attribute from a hickory entry
+(defn get-image-urls-from-public-photo-json-data
+  "Gets the image urls from the json data provided
   Arguments:
-    - A hickory entry
-  Returns:
-    - A href string"
-  [entry-hick]
-  (get-in entry-hick [:attrs :href]))
-
-(defn get-href-attribte-from-hickory-entries
-  "Gets the href attribute from hickory entries
-  Arguments:
-    - A collection of hickory entries
-  Returns:
-    - A collection of href strings"
-  [entries-hick]
-  (map get-href-attribute-from-hickory-entry entries-hick))
-
-(defn get-image-urls-from-public-photo-atom-data
-  "Gets the image urls from the atom data provided
-  Arguments:
-    - The atom data as text
+    - The json data as text (surrounded with jsonFlickrFeed(...) for some reason)
   Returns:
     - A collection of image urls"
-  [atom-data]
-  (-> atom-data
-      string->hickory
-      public-photo-entries-selector
-      get-href-attribte-from-hickory-entries))
+  [json-data]
+  (-> json-data
+      extract-json-data-from-flickr-feed
+      (json/parse-string true)
+      (get :items)
+      ((partial map #(get-in % [:media :m])))))
 
 (defn get-failed-to-download-error-msg
   [ex]
@@ -107,9 +77,8 @@
      (try
        (download-image-from-url url destination)
        {:url url}
-       (catch Exception ex {:url url :error (get-failed-to-download-error-msg ex)}))
-     ))
-  
+       (catch Exception ex {:url url :error (get-failed-to-download-error-msg ex)}))))
+
   ([url destination]
    (log/info (str "Writing out image to " destination))
    (with-open [out (io/output-stream destination)
@@ -134,10 +103,10 @@
   ([url resize-fn]
    (let [file-name (get-file-name-from-url url)
          destination (build-download-path file-name)]
-          (try
-            (download-and-resize-image-from-url url destination resize-fn)
-            {:url url}
-            (catch Exception ex {:url url :error (get-failed-to-download-error-msg ex)})))))
+     (try
+       (download-and-resize-image-from-url url destination resize-fn)
+       {:url url}
+       (catch Exception ex {:url url :error (get-failed-to-download-error-msg ex)})))))
 
 (defn make-resize-fn
   "Builds a resize function based on a resize-spec
@@ -150,8 +119,7 @@
     (and width height (false? maintain-ratio?)) #(resizer/force-resize % width height)
     (and width height) #(resizer/resize % width height)
     width #(resizer/resize-to-width % width)
-    height #(resizer/resize-to-height % height))
-  )
+    height #(resizer/resize-to-height % height)))
 
 
 (defn download-and-resize-images-from-urls
@@ -185,7 +153,7 @@
   (->
    (pull-public-photo-data)
    :body
-   get-image-urls-from-public-photo-atom-data
+   get-image-urls-from-public-photo-json-data
    ((partial take cnt))
    vec))
 
@@ -203,10 +171,11 @@
 
 
 (comment
-  (def example-data (slurp "test/flickr_fetcher/data/example.xml"))
-  (def urls (get-image-urls-from-public-photo-atom-data example-data))
-  (def hicko (hickory/as-hickory (hickory/parse example-data)))
-  (def selected-tags (selector/select (selector/child (selector/tag :entry) (selector/attr :type #(= "image/jpeg" %))) hicko))
+  (def example-data (slurp "test/flickr_fetcher/data/example.json"))
+
+
+  (extract-json-data-from-flickr-feed example-data)
+  (def urls (get-image-urls-from-public-photo-json-data example-data))
   (def test-resize-spec {:height 50 :width 200 :maintain-ratio? false})
   (println urls)
   (download-and-resize-images-from-urls urls test-resize-spec)

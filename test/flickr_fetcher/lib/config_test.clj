@@ -3,7 +3,7 @@
             [flickr-fetcher.lib.config :as sut]
             [clojure.java.io :as io]))
 
-(def existing-file-path "test/flickr_fetcher/data/example.xml")
+(def existing-file-path "test/flickr_fetcher/data/example.json")
 (def not-existing-file-path "test/flickr_fetcher/data/not-existing-file.xml")
 
 (defn get-ex-data
