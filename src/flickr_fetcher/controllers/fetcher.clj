@@ -64,7 +64,7 @@
   Returns:
     - An error-state map with the keys :current-errors and :req-params"
   [req-params]
-  (-> {:current-errors [] :req-params req-params}
+  (-> {:current-errors [] :req-params (or req-params {})}
       get-take-errors
       get-resize-spec-errors))
 
