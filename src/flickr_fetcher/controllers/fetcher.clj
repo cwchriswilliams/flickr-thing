@@ -82,7 +82,7 @@
         (resp/bad-request (string/join "\n" current-errors))
         (as-> req-params in
           (map in [:take :resize-spec]) ; pull parameters into vector in order
-          (filter (complement nil?) in)
+          (remove nil? in)
           (apply fetchr/get-photos in)
           (json/generate-string in)
           (resp/response in)
