@@ -109,11 +109,12 @@
        (catch Exception ex {:url url :error (get-failed-to-download-error-msg ex)})))))
 
 (def resize-fn-map
+  "Map that maps keyword to resize function.
+   (Note that functions take different numbers of parameters so apply will need to be used)"
   {:force-resize resizer/force-resize
    :resize-xy resizer/resize
    :resize-x resizer/resize-to-width
    :resize-y resizer/resize-to-height})
-
 
 (defn get-resize-fn
   "Gets the appropriate resize function based on a resize-spec
