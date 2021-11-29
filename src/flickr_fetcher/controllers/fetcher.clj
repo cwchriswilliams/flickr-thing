@@ -11,6 +11,9 @@
 ; This is an arbitrary safe height/width
 (def max-resize-heightwidth 65535)
 
+(def take-exceded-limit-error-string "take must be between 0 and 21")
+(def resize-spec-height-and-width-missing-error-string "At least one of height or width must be provided in resize-spec")
+
 (defn -append-error-to-state
   "Appends the new error to the error state map
   Arguments:
@@ -32,7 +35,7 @@
         take-value (:take with-default)]
     (cond
       ((complement pos-int?) take-value) (-append-error-to-state error-state "take must be a positive integer")
-      (> take-value 20) (-append-error-to-state error-state "take must be between 0 and 21")
+      (> take-value 20) (-append-error-to-state error-state take-exceded-limit-error-string)
       :else {:current-errors current-errors :req-params with-default})))
 
 (defn get-resize-spec-errors
@@ -46,7 +49,7 @@
     (if resize-spec
       (let [{:keys [width height maintain-ratio?]} resize-spec]
         (cond
-          (nil? (or width height)) (-append-error-to-state error-state "At least one of height or width must be provided in resize-spec")
+          (nil? (or width height)) (-append-error-to-state error-state resize-spec-height-and-width-missing-error-string)
           (and (some? width) (or ((complement pos-int?) width) (> width max-resize-heightwidth)))
           (-append-error-to-state error-state "width must be between 0-65536")
           (and (some? height) (or ((complement pos-int?) height) (> height max-resize-heightwidth)))
@@ -68,13 +71,14 @@
       get-take-errors
       get-resize-spec-errors))
 
-(defn fetchr-get-photos
+(defn fetchr-get-photos-with-get-photos-fn
   "Downloads photos from the flickr url
   Arguments:
     - A request object with an optional :take parameter
+    - A fn that gets the photos given a take and (opt) resize-spec 
   Returns:
     - json collection of downloaded images or bad request"
-  [req]
+  [req get-photos-fn]
   (as-> req input
     (:body input)
     (let [{:keys [current-errors req-params]} (get-parameter-errors input)]
@@ -83,8 +87,17 @@
         (as-> req-params in
           (map in [:take :resize-spec]) ; pull parameters into vector in order
           (remove nil? in)
-          (apply fetchr/get-photos in)
+          (apply get-photos-fn in)
           (json/generate-string in)
           (resp/response in)
           (resp/content-type in "application/json"))))))
+
+(defn fetchr-get-photos
+  "Downloads photos from the flickr url
+  Arguments:
+    - A request object with an optional :take parameter
+  Returns:
+    - json collection of downloaded images or bad request"
+  [req]
+  (fetchr-get-photos-with-get-photos-fn req fetchr/get-photos))
 
