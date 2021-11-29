@@ -7,12 +7,15 @@
             [flickr-fetcher.interop.log :as log])
   (:gen-class))
 
+(def default-port 80)
+(def default-app-settings-path "./appsettings.json")
+
 (def exit-codes {:unexpected-error -1 :ok 0 :failed-to-parse-args 1 :failed-to-load-config 2})
 
 (def cli-options
   "A definition of CLI options as defined in clojure.tools.cli"
-  [["-p" "--port PORT" "Listen port" :default 80 :parse-fn #(Integer/parseInt %) :validate [#(< 0 % 0x10000) "Must be an integer between 0 and 65536"]]
-   ["-c" "--config PATH" "Path to the configuration file" :default "./appsettings.json"]
+  [["-p" "--port PORT" "Listen port" :default default-port :parse-fn #(Integer/parseInt %) :validate [#(< 0 % 0x10000) "Must be an integer between 0 and 65536"]]
+   ["-c" "--config PATH" "Path to the configuration file" :default default-app-settings-path]
    ["-h" "--help" "Display usage information"]])
 
 (defn get-usage-text
@@ -56,8 +59,21 @@
 (defn get-exit-code-from-exception
   [ex]
   (let [data (or (ex-data ex) {})
-           ex-type (get data :type :unexpected-error)]
-    (get exit-codes ex-type)))
+        ex-type (get data :type :unexpected-error)]
+    (get exit-codes ex-type -1)))
+
+(defn parse-args-and-start-service-with-fn-map
+  [{:keys [start-service-fn print-fn log-fn]} args]
+  (try
+    (let [{:keys [summary options]} (process-cli-args args cli-options)]
+      (if (:help options)
+        (print-fn (get-usage-text summary))
+        (start-service-fn options))
+      (:ok exit-codes))
+    (catch Exception ex
+      (log-fn (str ex))
+      (print-fn (ex-message ex))
+      (get-exit-code-from-exception ex))))
 
 (defn -main
   "Evaluates the arguments and configuration file and starts the server based on provided args
@@ -65,16 +81,7 @@
   Arguments:
     - args as strings as defined in documentation"
   [& args]
-  (try
-    (let [{:keys [summary options]} (process-cli-args args cli-options)]
-      (if (:help options)
-        (println (get-usage-text summary))
-        (start-service options))
-      (:ok exit-codes))
-    (catch Exception ex
-      (log/error (str ex))
-      (println (ex-message ex))
-      (get-exit-code-from-exception ex))))
+  (parse-args-and-start-service-with-fn-map {:start-service-fn start-service :print-fn println :log-fn log/error} args))
 
 (comment
   (config/load-config "./resources/appsettings.json")
