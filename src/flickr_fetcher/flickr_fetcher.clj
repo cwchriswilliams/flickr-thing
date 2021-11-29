@@ -28,7 +28,7 @@
 "
          cli-options-summary))
 
-(defn process-cli-args
+(defn process-cli-args-with-cli-options-and-parser
   "Processes the provided cli args against the provided cli-options
   Arguments:
     - Command line args to parse
@@ -37,11 +37,15 @@
     - Map containing :exit-message (opt) - string to display to the user on the cli
                      :exit-status (opt) - error exit status if an error occurred
                      :options (opt) - The options provided on the command line"
-  [args cli-options]
-  (let [{:keys [errors options summary]} (cli/parse-opts args cli-options)]
+  [args cli-options parser]
+  (let [{:keys [errors options summary]} (parser args cli-options)]
     (if (some? errors)
       (throw (ex-info (str "Failed to parse CLI args:\n" (string/join \newline errors)) {:type :failed-to-parse-args}))
       {:options options :summary summary})))
+
+(defn process-cli-args
+  [args cli-options]
+  (process-cli-args-with-cli-options-and-parser args cli-options cli/parse-opts))
 
 
 (defn start-service
