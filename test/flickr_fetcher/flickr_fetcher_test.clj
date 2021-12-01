@@ -29,7 +29,7 @@
   (testing "If no exceptions are thrown and help parameter not provided, returns ok"
     (is (= 0 (sut/parse-args-and-start-service-with-fn-map {:start-service-fn (fn [_] :noaction) :log-fn (fn [_] :no-action) :print-fn (fn [_] :no-action)} [""])))))
 
-(deftest ^:integration process-cli-args-test
+(deftest ^:integration process-cli-args-integration-test
   (testing "If port or appsettings are not provided, defaults port and appsettings path"
     (is (= {:port sut/default-port :config sut/default-app-settings-path} (:options (sut/process-cli-args "" sut/cli-options))))
     (is (= {:port 5050 :config sut/default-app-settings-path} (:options (sut/process-cli-args ["--port" "5050"] sut/cli-options)))))
