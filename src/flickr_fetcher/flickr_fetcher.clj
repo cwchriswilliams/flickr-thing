@@ -109,4 +109,8 @@
 (comment
   (config/load-config "./resources/appsettings.json")
   (svr-mgmnt/start-server 5556)
-  (svr-mgmnt/restart-server))
+  (svr-mgmnt/restart-server)
+  
+  (require '[clj-http.client :as client])
+  (client/post "http://localhost:5556/photos" {:form-params {:take 2} :content-type :json})
+  )
