@@ -1,7 +1,6 @@
 (ns flickr-fetcher.lib.fetcher-test
   (:require [clojure.test :refer [deftest testing is]]
-            [flickr-fetcher.lib.fetcher :as sut]
-            [clojure.string :as string]))
+            [flickr-fetcher.lib.fetcher :as sut]))
 
 (deftest get-file-name-from-url-test
   (testing "Returns the last element of the url as the filename including extension"
@@ -42,6 +41,23 @@
     (is (= ["url"] (sut/get-image-urls-from-public-photo-json-data "jsonFlickrFeed({\"items\": [{\"media\": {\"m\": \"url\"}}]})")))
     (is (= ["url", "url2"] (sut/get-image-urls-from-public-photo-json-data "jsonFlickrFeed({\"items\": [{\"media\": {\"m\": \"url\"}}, {\"media\": {\"m\": \"url2\"}}]})")))))
 
+
+(deftest get-resize-fn-test
+  (testing "Returns :force-resize if :height and :width are provided and :maintain-ratio? is false"
+    (is (= :force-resize (sut/get-resize-fn {:height 50 :width 32 :maintain-ratio? false}))))
+  (testing "Returns :resize-xy if :height and :width are provided and :maintain-ratio? is not false"
+    (is (= :resize-xy (sut/get-resize-fn {:height 50 :width 32 :maintain-ratio? true})))
+    (is (= :resize-xy (sut/get-resize-fn {:height 50 :width 32}))))
+  (testing "Returns :resize-x if :width is provided and :height is not"
+    (is (= :resize-x (sut/get-resize-fn {:width 32 :maintain-ratio? true})))
+    (is (= :resize-x (sut/get-resize-fn {:width 32}))))
+  (testing "Returns :resize-y if :height is provided and :width is not"
+    (is (= :resize-y (sut/get-resize-fn {:height 32 :maintain-ratio? true})))
+    (is (= :resize-y (sut/get-resize-fn {:height 32}))))
+  (testing "Throws exception if neither :height nor :width provided"
+    (is (thrown? Exception (sut/get-resize-fn {::maintain-ratio? true})))
+    (is (thrown? Exception (sut/get-resize-fn {::maintain-ratio? false})))
+    (is (thrown? Exception (sut/get-resize-fn {})))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Integration Tests

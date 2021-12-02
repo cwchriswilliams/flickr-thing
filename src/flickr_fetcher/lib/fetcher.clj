@@ -108,18 +108,39 @@
        {:url url}
        (catch Exception ex {:url url :error (get-failed-to-download-error-msg ex)})))))
 
+(def resize-fn-map
+  "Map that maps keyword to resize function.
+   (Note that functions take different numbers of parameters so apply will need to be used)"
+  {:force-resize resizer/force-resize
+   :resize-xy resizer/resize
+   :resize-x resizer/resize-to-width
+   :resize-y resizer/resize-to-height})
+
+(defn get-resize-fn
+  "Gets the appropriate resize function based on a resize-spec
+  Arguments:
+    - A resize-spec with the keys (opt):width (opt):height (opt):maintain-ratio?. At least height or width must be provided
+  Returns:
+    - a keyword to the resize-fn-map indicating which resize-fn to use"
+  [{:keys [:width :height :maintain-ratio?]}]
+  (cond
+    (and width height (false? maintain-ratio?)) :force-resize
+    (and width height) :resize-xy
+    width :resize-x
+    height :resize-y
+    :else (throw (ex-info "Invalid resize-spec provided" {:type :invalid-resize-spec}))))
+
 (defn make-resize-fn
   "Builds a resize function based on a resize-spec
   Arguments:
     - A resize-spec with the keys (opt):width (opt):height (opt):maintain-ratio?. At least height or width must be provided
   Returns:
     - A resize function (takes a stream and returns an Image)"
-  [{:keys [:width :height :maintain-ratio?]}]
-  (cond
-    (and width height (false? maintain-ratio?)) #(resizer/force-resize % width height)
-    (and width height) #(resizer/resize % width height)
-    width #(resizer/resize-to-width % width)
-    height #(resizer/resize-to-height % height)))
+  [{:keys [:width :height] :as resize-spec}]
+  (let [resize-fn-key (get-resize-fn resize-spec)
+        resize-fn (get resize-fn-map resize-fn-key)
+        params (remove nil? [width height])]
+    (fn [inp] (apply resize-fn (into [inp] params)))))
 
 
 (defn download-and-resize-images-from-urls
@@ -177,5 +198,4 @@
   (def urls (get-image-urls-from-public-photo-json-data example-data))
   (def test-resize-spec {:height 50 :width 200 :maintain-ratio? false})
   (println urls)
-  (download-and-resize-images-from-urls urls test-resize-spec)
-  )
+  (download-and-resize-images-from-urls urls test-resize-spec))

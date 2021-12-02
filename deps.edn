@@ -21,7 +21,9 @@
          :extra-deps {org.clojure/test.check {:mvn/version "1.1.0"}
                       io.github.cognitect-labs/test-runner
                       {:git/url "https://github.com/cognitect-labs/test-runner"
-                       :sha "62ef1de18e076903374306060ac0e8a752e57c86"}}
+                       :sha "62ef1de18e076903374306060ac0e8a752e57c86"}
+                      lambdaisland/kaocha-cloverage {:mvn/version "1.0.75"}
+                      }
          :exec-fn cognitect.test-runner.api/test}
   :uberjar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.278"}}
             :exec-fn hf.depstar/uberjar

@@ -35,3 +35,15 @@
 
     (is (seq (:current-errors (sut/get-parameter-errors {:resize-spec {:maintain-ratio? false}}))))
     (is (seq (:current-errors (sut/get-parameter-errors {:resize-spec {:height 5 :maintain-ratio? "test"}}))))))
+
+(defn build-invalid-response [error-msg] {:body error-msg :headers {} :status 400})
+(defn build-valid-response [in-map] {:body in-map :headers {"Content-Type" "application/json"} :status 200})
+
+(deftest fetchr-get-photos-with-get-photos-fn-test
+  (testing "Returns bad request if parameters do not match spec"
+    (is (= (build-invalid-response sut/take-exceded-limit-error-string) (sut/fetchr-get-photos-with-get-photos-fn {:body {:take 200}} (fn [_] [{:url "sample-url-1.jpg"}]))))
+    (is (= (build-invalid-response sut/resize-spec-height-and-width-missing-error-string) (sut/fetchr-get-photos-with-get-photos-fn {:body {:resize-spec {}}} (fn [_ _] [{:url "sample-url-1.jpg"}])))))
+  (testing "Returns OK request with return of get-photos-fn wrapped as json on valid parameters"
+    (is (= (build-valid-response "[{\"url\":\"sample-url-1.jpg\"}]") (sut/fetchr-get-photos-with-get-photos-fn {:body {:take 20}} (fn [_] [{:url "sample-url-1.jpg"}]))))
+    (is (= (build-valid-response "[{\"url\":\"sample-url-2.jpg\"}]") (sut/fetchr-get-photos-with-get-photos-fn {:body {:take 20}} (fn [_] [{:url "sample-url-2.jpg"}]))))
+    (is (= (build-valid-response "[{\"url\":\"sample-url-2.jpg\"}]") (sut/fetchr-get-photos-with-get-photos-fn {:body {:resize-spec {:height 50}}} (fn [_ _] [{:url "sample-url-2.jpg"}]))))))
